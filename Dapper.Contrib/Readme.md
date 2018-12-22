@@ -1,6 +1,10 @@
 Dapper.Contrib - more extensions for dapper
 ===========================================
 
+Mod
+--------
+add Oracle Support
+
 Features
 --------
 Dapper.Contrib contains a number of helper methods for inserting, getting,

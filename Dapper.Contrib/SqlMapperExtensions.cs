@@ -69,6 +69,7 @@ namespace Dapper.Contrib.Extensions
             = new Dictionary<string, ISqlAdapter>
             {
                 ["sqlconnection"] = new SqlServerAdapter(),
+                ["oracleconnection"] = new OracleAdapter(),
                 ["sqlceconnection"] = new SqlCeServerAdapter(),
                 ["npgsqlconnection"] = new PostgresAdapter(),
                 ["sqliteconnection"] = new SQLiteAdapter(),
@@ -371,7 +372,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < allPropertiesExceptKeyAndComputed.Count; i++)
             {
                 var property = allPropertiesExceptKeyAndComputed[i];
-                sbParameterList.AppendFormat("@{0}", property.Name);
+                sbParameterList.AppendFormat("{0}{1}", adapter.ParameterSymbol,property.Name);
                 if (i < allPropertiesExceptKeyAndComputed.Count - 1)
                     sbParameterList.Append(", ");
             }
@@ -805,6 +806,11 @@ public partial interface ISqlAdapter
     /// <param name="sb">The string builder  to append to.</param>
     /// <param name="columnName">The column name.</param>
     void AppendColumnNameEqualsValue(StringBuilder sb, string columnName);
+
+    /// <summary>
+    /// Parameter formatting prefix symbol
+    /// </summary>
+    string ParameterSymbol { get; }
 }
 
 /// <summary>
@@ -812,6 +818,8 @@ public partial interface ISqlAdapter
 /// </summary>
 public partial class SqlServerAdapter : ISqlAdapter
 {
+    public string ParameterSymbol => "@";
+
     /// <summary>
     /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
     /// </summary>
@@ -859,7 +867,55 @@ public partial class SqlServerAdapter : ISqlAdapter
     /// <param name="columnName">The column name.</param>
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
-        sb.AppendFormat("[{0}] = @{1}", columnName, columnName);
+        sb.AppendFormat("[{0}] = {1}{2}", columnName, ParameterSymbol, columnName);
+    }
+}
+
+/// <summary>
+/// The Oracle database adapter.
+/// </summary>
+public partial class OracleAdapter : ISqlAdapter
+{
+    public string ParameterSymbol => ":";
+
+    /// <summary>
+    /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
+    /// </summary>
+    /// <param name="connection">The connection to use.</param>
+    /// <param name="transaction">The transaction to use.</param>
+    /// <param name="commandTimeout">The command timeout to use.</param>
+    /// <param name="tableName">The table to insert into.</param>
+    /// <param name="columnList">The columns to set with this insert.</param>
+    /// <param name="parameterList">The parameters to set for this insert.</param>
+    /// <param name="keyProperties">The key columns in this table.</param>
+    /// <param name="entityToInsert">The entity to insert.</param>
+    /// <returns>The Id of the row created.</returns>
+    public int Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
+    {
+        var cmd = $"insert into {tableName} ({columnList}) values ({parameterList})";
+        var r = connection.Execute(cmd, entityToInsert, transaction, commandTimeout);
+
+        return r;
+    }
+
+    /// <summary>
+    /// Adds the name of a column.
+    /// </summary>
+    /// <param name="sb">The string builder  to append to.</param>
+    /// <param name="columnName">The column name.</param>
+    public void AppendColumnName(StringBuilder sb, string columnName)
+    {
+        sb.AppendFormat("{0}", columnName);
+    }
+
+    /// <summary>
+    /// Adds a column equality to a parameter.
+    /// </summary>
+    /// <param name="sb">The string builder  to append to.</param>
+    /// <param name="columnName">The column name.</param>
+    public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
+    {
+        sb.AppendFormat("{0} = {1}{2}", columnName, ParameterSymbol, columnName);
     }
 }
 
@@ -868,6 +924,8 @@ public partial class SqlServerAdapter : ISqlAdapter
 /// </summary>
 public partial class SqlCeServerAdapter : ISqlAdapter
 {
+    public string ParameterSymbol => "@";
+
     /// <summary>
     /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
     /// </summary>
@@ -915,7 +973,7 @@ public partial class SqlCeServerAdapter : ISqlAdapter
     /// <param name="columnName">The column name.</param>
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
-        sb.AppendFormat("[{0}] = @{1}", columnName, columnName);
+        sb.AppendFormat("[{0}] = {1}{2}", columnName, ParameterSymbol, columnName);
     }
 }
 
@@ -924,6 +982,8 @@ public partial class SqlCeServerAdapter : ISqlAdapter
 /// </summary>
 public partial class MySqlAdapter : ISqlAdapter
 {
+    public string ParameterSymbol => "@";
+
     /// <summary>
     /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
     /// </summary>
@@ -970,7 +1030,7 @@ public partial class MySqlAdapter : ISqlAdapter
     /// <param name="columnName">The column name.</param>
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
-        sb.AppendFormat("`{0}` = @{1}", columnName, columnName);
+        sb.AppendFormat("`{0}` = {1}{2}", columnName, ParameterSymbol, columnName);
     }
 }
 
@@ -979,6 +1039,8 @@ public partial class MySqlAdapter : ISqlAdapter
 /// </summary>
 public partial class PostgresAdapter : ISqlAdapter
 {
+    public string ParameterSymbol => "@";
+
     /// <summary>
     /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
     /// </summary>
@@ -1046,7 +1108,7 @@ public partial class PostgresAdapter : ISqlAdapter
     /// <param name="columnName">The column name.</param>
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
-        sb.AppendFormat("\"{0}\" = @{1}", columnName, columnName);
+        sb.AppendFormat("\"{0}\" = {1}{2}", columnName, ParameterSymbol, columnName);
     }
 }
 
@@ -1055,6 +1117,8 @@ public partial class PostgresAdapter : ISqlAdapter
 /// </summary>
 public partial class SQLiteAdapter : ISqlAdapter
 {
+    public string ParameterSymbol => "@";
+
     /// <summary>
     /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
     /// </summary>
@@ -1099,7 +1163,7 @@ public partial class SQLiteAdapter : ISqlAdapter
     /// <param name="columnName">The column name.</param>
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
-        sb.AppendFormat("\"{0}\" = @{1}", columnName, columnName);
+        sb.AppendFormat("\"{0}\" = {1}{2}", columnName, ParameterSymbol, columnName);
     }
 }
 
@@ -1108,6 +1172,8 @@ public partial class SQLiteAdapter : ISqlAdapter
 /// </summary>
 public partial class FbAdapter : ISqlAdapter
 {
+    public string ParameterSymbol => "@";
+
     /// <summary>
     /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
     /// </summary>
@@ -1156,6 +1222,6 @@ public partial class FbAdapter : ISqlAdapter
     /// <param name="columnName">The column name.</param>
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
-        sb.AppendFormat("{0} = @{1}", columnName, columnName);
+        sb.AppendFormat("{0} = {1}{2}", columnName, ParameterSymbol, columnName);
     }
 }
