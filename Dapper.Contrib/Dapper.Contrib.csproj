@@ -27,4 +27,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
   </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y $(TargetDir)$(TargetName).dll C:\iHomeSoft\develop\0libs\&#xD;&#xA;copy /Y $(TargetDir)$(TargetName).xml C:\iHomeSoft\develop\0libs\" />
+  </Target>
 </Project>
